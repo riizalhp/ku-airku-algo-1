@@ -49,86 +49,27 @@ export const createDeliveryRoute = async (payload: { deliveryDate: string, assig
         ? payload.assignments
         : [{ vehicleId: null, driverId: null }];
 
-    // ========= AUTO FLOW (no assignments provided) =========
-    if (payload.assignments.length === 0) {
-        const MAX_STOPS_PER_ROUTE = 4;
-        // Ambil semua pesanan Pending untuk tanggal yang diminta
-        const { data: orders, error } = await supabase.from('orders').select(`
-            id,
-            store_id,
-            store:store_id (name, address, location)
-        `)
-        .eq('status', 'Pending')
-        .eq('desired_delivery_date', payload.deliveryDate);
-
-        if (error) throw new Error(error.message);
-        const ordersToRoute = orders || [];
-
-        if (ordersToRoute.length === 0) {
-            return { success: false, message: 'Tidak ada pesanan pending untuk tanggal ini.', routes: [] };
-        }
-
-        // Bagi menjadi rute dengan maksimal 4 stop
-        const chunks: any[][] = [];
-        for (let i = 0; i < ordersToRoute.length; i += MAX_STOPS_PER_ROUTE) {
-            chunks.push(ordersToRoute.slice(i, i + MAX_STOPS_PER_ROUTE));
-        }
-
-        for (const chunk of chunks) {
-            const { data: route, error: routeError } = await supabase.from('route_plans').insert({
-                date: payload.deliveryDate,
-                vehicle_id: null,
-                driver_id: null,
-                assignment_status: 'unassigned'
-            }).select().single();
-            if (routeError) throw new Error(routeError.message);
-
-            createdRoutes.push(route as any);
-            const orderIds = chunk.map(o => o.id);
-
-            // Tandai pesanan menjadi Routed (tanpa assign kendaraan)
-            await supabase.from('orders').update({
-                assigned_vehicle_id: null,
-                status: 'Routed'
-            }).in('id', orderIds);
-
-            const stopsData = chunk.map((order: any, idx: number) => ({
-                route_plan_id: route.id,
-                order_id: order.id,
-                store_id: order.store_id,
-                sequence: idx + 1,
-                status: 'Pending'
-            }));
-
-            const { error: stopsError } = await supabase.from('route_stops').insert(stopsData);
-            if (stopsError) console.error('Error creating stops', stopsError);
-        }
-
-        return { success: true, message: `Rute berhasil dibuat (${createdRoutes.length} rute, max 4 stop per rute).`, routes: createdRoutes };
-    }
-
-    // ========= ASSIGNED FLOW (existing) =========
     let ordersToRoute: any[] = [];
+    // 1. Determine orders
     if (payload.selectedOrderIds && payload.selectedOrderIds.length > 0) {
         const { data } = await supabase.from('orders').select('id, store_id').in('id', payload.selectedOrderIds);
         ordersToRoute = data || [];
+    } else if (payload.assignments.length === 0) {
+        // Auto-fetch all pending if no assignments provided
+        const { data } = await supabase.from('orders').select('id, store_id').eq('status', 'Pending');
+        ordersToRoute = data || [];
     }
 
-    // Jika tidak ada order ditemukan saat assignments ada, langsung buat rute kosong agar bisa di-assign manual
-    if (ordersToRoute.length === 0) {
-        const { data: route, error } = await supabase.from('route_plans').insert({
-            date: payload.deliveryDate,
-            vehicle_id: assignments[0].vehicleId || null,
-            driver_id: assignments[0].driverId || null,
-            assignment_status: (!assignments[0].vehicleId || !assignments[0].driverId) ? 'unassigned' : 'assigned'
-        }).select().single();
-        if (error) throw new Error(error.message);
-        createdRoutes.push(route as any);
-        return { success: true, message: 'Rute kosong berhasil dibuat.', routes: createdRoutes };
+    if (payload.assignments.length === 0 && ordersToRoute.length === 0) {
+        return { success: false, message: 'Tidak ada pesanan pending.', routes: [] };
     }
 
+    // 2. Create Routes
     for (const assignment of assignments) {
+        // If driver/vehicle are null (coercing explicit null from the placeholder above), it's 'unassigned'
         const isUnassigned = !assignment.vehicleId || !assignment.driverId;
+
+        // Use 'null' for Supabase if the string is empty or null
         const vId = assignment.vehicleId || null;
         const dId = assignment.driverId || null;
 
@@ -142,6 +83,9 @@ export const createDeliveryRoute = async (payload: { deliveryDate: string, assig
         if (error) throw new Error(error.message);
         createdRoutes.push(route as any);
 
+        // 3. Add Stops to the first suitable route (simple logic for now)
+        // If we have multiple assignments, this logic currently only dumps orders into the *first* one loop hits if we don't clear ordersToRoute.
+        // But since we want to assign ALL found pending orders to the "Unassigned" route created in the auto-flow, this works.
         if (ordersToRoute.length > 0) {
             const orderIds = ordersToRoute.map(o => o.id);
             await supabase.from('orders').update({
@@ -160,6 +104,22 @@ export const createDeliveryRoute = async (payload: { deliveryDate: string, assig
             const { error: stopsError } = await supabase.from('route_stops').insert(stopsData);
             if (stopsError) console.error('Error creating stops', stopsError);
 
+            // Send notification to driver if assigned
+            if (!isUnassigned && dId) {
+                try {
+                    await supabase.from('driver_notifications').insert({
+                        driver_id: dId,
+                        route_id: route.id,
+                        message: `Rute pengiriman baru untuk ${payload.deliveryDate}: ${ordersToRoute.length} pesanan`,
+                        type: 'new_route',
+                        created_at: new Date().toISOString()
+                    });
+                } catch (err) {
+                    console.error('Failed to send driver notification:', err);
+                }
+            }
+
+            // Important: Clear orders so we don't add them again if there are multiple assignments (though usually auto-flow has 1)
             ordersToRoute = [];
         }
     }
