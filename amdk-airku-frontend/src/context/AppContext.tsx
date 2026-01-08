@@ -94,10 +94,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             
             try {
                 if (event === 'SIGNED_OUT') {
-                    console.log("AppContext: User signed out");
-                    setToken(null);
-                    if (mounted) {
-                        setCurrentUser(null);
+                    console.log("AppContext: User signed out - checking if intentional");
+                    // Only clear user if session is actually gone
+                    const { data: { session: currentSession } } = await supabase.auth.getSession();
+                    if (!currentSession) {
+                        console.log("AppContext: Confirmed no session, logging out");
+                        setToken(null);
+                        if (mounted) {
+                            setCurrentUser(null);
+                        }
+                    } else {
+                        console.warn("AppContext: SIGNED_OUT event but session still exists - ignoring logout");
                     }
                 } else if (event === 'TOKEN_REFRESHED') {
                     console.log("AppContext: Token refreshed successfully");

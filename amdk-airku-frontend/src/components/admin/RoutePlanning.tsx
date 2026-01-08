@@ -123,7 +123,13 @@ export const RoutePlanning: React.FC = () => {
 
     const handleDeleteDeliveryTrip = (tripId: string) => {
         if (window.confirm("Anda yakin ingin menghapus/membatalkan perjalanan ini? Pesanan akan dikembalikan ke status 'Pending'.")) {
-            deleteDeliveryMutation.mutate(tripId);
+            console.log('[Delete Trip] User confirmed deletion for trip:', tripId);
+            try {
+                deleteDeliveryMutation.mutate(tripId);
+            } catch (err) {
+                console.error('[Delete Trip] Caught error during mutation:', err);
+                alert('Terjadi kesalahan saat menghapus rute. Silakan refresh halaman dan coba lagi.');
+            }
         }
     };
 

@@ -22,31 +22,3 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     },
 });
 
-// Add global error handler to log Supabase errors without triggering logout
-// This helps debug RLS/permission issues that might look like auth problems
-const originalFrom = supabase.from.bind(supabase);
-supabase.from = (table: string) => {
-    const builder = originalFrom(table);
-    const methods = ['select', 'insert', 'update', 'delete', 'upsert'];
-    
-    methods.forEach(method => {
-        const original = (builder as any)[method].bind(builder);
-        (builder as any)[method] = (...args: any[]) => {
-            const result = original(...args);
-            // Wrap the promise to add error logging
-            if (result && typeof result.then === 'function') {
-                return result.then((response: any) => {
-                    if (response.error) {
-                        console.error(`[Supabase ${method.toUpperCase()}] Error on table '${table}':`, response.error);
-                        // Don't throw - let the caller handle it
-                    }
-                    return response;
-                });
-            }
-            return result;
-        };
-    });
-    
-    return builder;
-};
-
