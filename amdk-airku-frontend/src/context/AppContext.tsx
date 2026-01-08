@@ -78,22 +78,50 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            console.log("AppContext: Auth Change:", event);
+            console.log("AppContext: Auth Change:", event, session ? `Session valid` : 'No session');
+            
+            // Don't logout on INITIAL_SESSION - this prevents false logouts on page load
+            if (event === 'INITIAL_SESSION' && !session) {
+                console.log("AppContext: Skipping INITIAL_SESSION without session (normal page load)");
+                return;
+            }
+            
+            // Skip processing if event is USER_UPDATED (metadata changes, not auth changes)
+            if (event === 'USER_UPDATED') {
+                console.log("AppContext: Skipping USER_UPDATED (metadata only)");
+                return;
+            }
+            
             try {
-                if (session?.user) {
-                    console.log("AppContext: Auth session detected, fetching profile for", session.user.id);
+                if (event === 'SIGNED_OUT') {
+                    console.log("AppContext: User signed out");
+                    setToken(null);
+                    if (mounted) {
+                        setCurrentUser(null);
+                    }
+                } else if (event === 'TOKEN_REFRESHED') {
+                    console.log("AppContext: Token refreshed successfully");
+                    // Token refresh is automatic, just update token - don't refetch profile
+                    if (session) {
+                        setToken(session.access_token);
+                    }
+                } else if (event === 'SIGNED_IN' && session?.user) {
+                    // Only fetch profile on actual sign in
+                    console.log("AppContext: User signed in, fetching profile for", session.user.id);
                     setToken(session.access_token);
                     const user = await fetchProfile(session.user.id);
-                    console.log("AppContext: Profile loaded from auth change", user);
+                    console.log("AppContext: Profile loaded from sign in", user);
                     if (mounted) {
                         setCurrentUser(user);
                         console.log("AppContext: currentUser set");
                     }
-                } else {
-                    console.log("AppContext: No session, clearing state");
-                    setToken(null);
-                    if (mounted) {
-                        setCurrentUser(null);
+                } else if (session?.user && !currentUser) {
+                    // Fallback: If we have a session but no currentUser (shouldn't happen but defensive)
+                    console.log("AppContext: Session exists but no currentUser, fetching profile");
+                    setToken(session.access_token);
+                    const user = await fetchProfile(session.user.id);
+                    if (mounted && user) {
+                        setCurrentUser(user);
                     }
                 }
             } catch (err) {
@@ -133,15 +161,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }, []);
 
     const logout = useCallback(async () => {
-        // Clear local state immediately
-        setCurrentUser(null);
-        setToken(null);
+        console.log('Logging out...');
         
-        // Sign out from Supabase
+        // Sign out from Supabase first
         await supabase.auth.signOut();
         
-        // Force redirect to login
-        window.location.href = '/';
+        // Clear local state
+        setCurrentUser(null);
+        setToken(null);
     }, []);
 
     const value: AppContextType = {

@@ -41,23 +41,14 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Interceptor untuk handle token expired
+// Interceptor untuk handle errors (DISABLED auto-logout - let Supabase auth handle it)
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response) {
-      const { status, data } = error.response;
-      if (
-        status === 401 &&
-        ['TOKEN_EXPIRED', 'INVALID_TOKEN', 'NO_TOKEN'].includes(data.error)
-      ) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        delete api.defaults.headers.common['Authorization'];
-        if (window.location.pathname !== '/') {
-          window.location.href = '/';
-        }
-      }
+    // Don't auto-logout on 401 - Supabase auth handles session management
+    // This interceptor is only for deprecated railway API calls
+    if (error.response?.status === 401) {
+      console.warn('[DEPRECATED API] Got 401 but not auto-logging out. Check Supabase session.');
     }
     return Promise.reject(error);
   }

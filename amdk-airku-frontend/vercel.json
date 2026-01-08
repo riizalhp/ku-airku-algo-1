@@ -10,7 +10,7 @@
       "source": "/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
-        { "key": "X-App-Version", "value": "2026.01.08.1" }
+        { "key": "X-App-Version", "value": "2026.01.09.1" }
       ]
     }
   ]

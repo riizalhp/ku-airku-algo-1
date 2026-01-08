@@ -172,7 +172,39 @@ export const startOrCompleteTrip = async (vehicleId: string, action: 'start' | '
 };
 
 export const moveOrder = async (payload: { orderId: string, newVehicleId: string | null }): Promise<void> => {
-    await supabase.from('orders').update({ assigned_vehicle_id: payload.newVehicleId }).eq('id', payload.orderId);
+    // Update order status dan assigned vehicle
+    const updateData: any = { 
+        assigned_vehicle_id: payload.newVehicleId 
+    };
+    
+    // Jika newVehicleId null, kembalikan status ke Pending
+    if (payload.newVehicleId === null) {
+        updateData.status = 'Pending';
+        
+        // Hapus order dari route stops di semua routes
+        const { error: deleteError } = await supabase
+            .from('route_stops')
+            .delete()
+            .eq('order_id', payload.orderId);
+        
+        if (deleteError) {
+            console.error('Error deleting route stops:', deleteError);
+            throw new Error('Gagal menghapus order dari route stops');
+        }
+    } else {
+        updateData.status = 'Routed';
+    }
+    
+    // Update order
+    const { error: updateError } = await supabase
+        .from('orders')
+        .update(updateData)
+        .eq('id', payload.orderId);
+    
+    if (updateError) {
+        console.error('Error updating order:', updateError);
+        throw new Error('Gagal mengubah status order');
+    }
 };
 
 // --- Sales Visit Routes ---
