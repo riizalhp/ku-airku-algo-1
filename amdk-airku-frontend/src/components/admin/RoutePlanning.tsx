@@ -48,7 +48,11 @@ export const RoutePlanning: React.FC = () => {
             setIsModalOpen(false);
             setDeliveryForm({ date: new Date().toISOString().split('T')[0] });
         },
-        onError: (err: any) => setModalError(err.response?.data?.message || 'Gagal membuat rute.'),
+        onError: (err: any) => {
+            console.error('[Create Route Mutation] Error:', err);
+            const errorMessage = err?.message || err?.response?.data?.message || 'Gagal membuat rute. Silakan coba lagi.';
+            setModalError(errorMessage);
+        },
     });
 
     const assignDriverVehicleMutation = useMutation({
@@ -61,7 +65,11 @@ export const RoutePlanning: React.FC = () => {
             setSelectedRouteForAssignment(null);
             setAssignmentForm({ vehicleId: '', driverId: '' });
         },
-        onError: (err: any) => setModalError(err.response?.data?.message || 'Gagal meng-assign driver dan armada.'),
+        onError: (err: any) => {
+            console.error('[Assign Driver Mutation] Error:', err);
+            const errorMessage = err?.message || err?.response?.data?.message || 'Gagal meng-assign driver dan armada.';
+            setModalError(errorMessage);
+        },
     });
 
     const deleteDeliveryMutation = useMutation({
@@ -71,7 +79,11 @@ export const RoutePlanning: React.FC = () => {
             queryClient.invalidateQueries({ queryKey: ['deliveryRoutes'] });
             queryClient.invalidateQueries({ queryKey: ['orders'] });
         },
-        onError: (err: any) => alert(err.response?.data?.message || 'Gagal menghapus rute.'),
+        onError: (err: any) => {
+            console.error('[Delete Route Mutation] Error:', err);
+            const errorMessage = err?.message || err?.response?.data?.message || 'Gagal menghapus rute. Silakan coba lagi.';
+            alert(errorMessage);
+        },
     });
 
     const handleCreateDeliveryPlan = () => {

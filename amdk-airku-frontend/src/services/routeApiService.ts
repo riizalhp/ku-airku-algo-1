@@ -168,13 +168,55 @@ export const createDeliveryRoute = async (payload: { deliveryDate: string, assig
 };
 
 export const deleteDeliveryRoute = async (routeId: string): Promise<void> => {
-    const { data: stops } = await supabase.from('route_stops').select('order_id').eq('route_id', routeId);
-    if (stops && stops.length > 0) {
-        const orderIds = stops.map(s => s.order_id);
-        await supabase.from('orders').update({ status: 'Pending', assigned_vehicle_id: null }).in('id', orderIds);
+    try {
+        console.log('[Delete Route] Starting deletion for route:', routeId);
+        
+        // Get stops for this route
+        const { data: stops, error: stopsQueryError } = await supabase
+            .from('route_stops')
+            .select('order_id')
+            .eq('route_plan_id', routeId); // Changed from 'route_id' to 'route_plan_id'
+        
+        if (stopsQueryError) {
+            console.error('[Delete Route] Error querying stops:', stopsQueryError);
+            throw new Error(`Gagal mengambil data stops: ${stopsQueryError.message}`);
+        }
+        
+        console.log('[Delete Route] Found stops:', stops?.length || 0);
+        
+        // Update orders back to Pending
+        if (stops && stops.length > 0) {
+            const orderIds = stops.map(s => s.order_id);
+            console.log('[Delete Route] Updating orders to Pending:', orderIds);
+            
+            const { error: ordersUpdateError } = await supabase
+                .from('orders')
+                .update({ status: 'Pending', assigned_vehicle_id: null })
+                .in('id', orderIds);
+            
+            if (ordersUpdateError) {
+                console.error('[Delete Route] Error updating orders:', ordersUpdateError);
+                throw new Error(`Gagal mengupdate status pesanan: ${ordersUpdateError.message}`);
+            }
+        }
+        
+        // Delete the route (cascade will delete route_stops automatically if FK is set)
+        console.log('[Delete Route] Deleting route plan...');
+        const { error: deleteError } = await supabase
+            .from('route_plans')
+            .delete()
+            .eq('id', routeId);
+        
+        if (deleteError) {
+            console.error('[Delete Route] Error deleting route:', deleteError);
+            throw new Error(`Gagal menghapus rute: ${deleteError.message}`);
+        }
+        
+        console.log('[Delete Route] Successfully deleted route:', routeId);
+    } catch (error: any) {
+        console.error('[Delete Route] Fatal error:', error);
+        throw error; // Re-throw to be caught by mutation onError
     }
-    const { error } = await supabase.from('route_plans').delete().eq('id', routeId);
-    if (error) throw new Error(error.message);
 };
 
 export const assignDriverVehicle = async (payload: { routeId: string, vehicleId: string, driverId: string }): Promise<{ success: boolean, message: string }> => {
