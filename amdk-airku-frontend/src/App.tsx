@@ -172,6 +172,11 @@ const App: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
 
+    // Log app version to verify correct build is deployed
+    useEffect(() => {
+        console.log('📦 KU AIRKU App Version: 2024.01.08.1 - Supabase Auth Only (NO RAILWAY)');
+    }, []);
+
     // Redirect to appropriate dashboard when user logs in
     useEffect(() => {
         if (currentUser && (location.pathname === '/' || location.pathname === '/login')) {

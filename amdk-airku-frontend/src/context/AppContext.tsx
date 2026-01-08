@@ -112,6 +112,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }, []);
 
     const login = useCallback(async (email: string, password: string) => {
+        console.log('🔐 Login attempt using SUPABASE AUTH (not railway) - v2024.01.08');
         setIsLoading(true);
         const { data, error } = await supabase.auth.signInWithPassword({
             email,

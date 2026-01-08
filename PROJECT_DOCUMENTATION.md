@@ -185,11 +185,11 @@ User Action → React Component → API Service (Axios)
 
 ### Deployment
 
-| Platform    | Purpose            | URL                          |
-| ----------- | ------------------ | ---------------------------- |
-| **Vercel**  | Frontend Hosting   | TBD                          |
-| **Railway** | Backend + Database | TBD                          |
-| **GitHub**  | Version Control    | github.com/riizalhp/ku-airku |
+| Platform    | Purpose            | URL                                 |
+| ----------- | ------------------ | ----------------------------------- |
+| **Vercel**  | Frontend Hosting   | TBD                                 |
+| **Railway** | Backend + Database | TBD                                 |
+| **GitHub**  | Version Control    | github.com/riizalhp/ku-airku-algo-1 |
 
 ---
 
@@ -2113,7 +2113,7 @@ chore: Update dependencies
 
 **Name:** Riizal HP  
 **Email:** riizalhp@example.com  
-**GitHub:** github.com/riizalhp
+**GitHub:** github.com/riizalhp/ku-airku-algo-1
 
 ### Organization
 

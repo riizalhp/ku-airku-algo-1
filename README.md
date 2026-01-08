@@ -62,8 +62,8 @@ Git
 ### 1. Clone Repository
 
 ```bash
-git clone https://github.com/riizalhp/ku-airku.git
-cd ku-airku
+git clone https://github.com/riizalhp/ku-airku-algo-1.git
+cd ku-airku-algo-1
 ```
 
 ### 2. Backend Setup
@@ -500,7 +500,7 @@ All rights reserved
 For questions, issues, or contributions:
 
 - 📧 Email: riizalhp@example.com
-- 🐛 Issues: [GitHub Issues](https://github.com/riizalhp/ku-airku/issues)
+- 🐛 Issues: [GitHub Issues](https://github.com/riizalhp/ku-airku-algo-1/issues)
 - 📖 Docs: [Complete Documentation](./PROJECT_DOCUMENTATION.md)
 
 ---
