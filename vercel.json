@@ -1,0 +1,17 @@
+{
+  "buildCommand": "cd amdk-airku-frontend && npm install && npm run build",
+  "outputDirectory": "amdk-airku-frontend/dist",
+  "framework": "vite",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+        { "key": "X-App-Version", "value": "2026.01.08.1" }
+      ]
+    }
+  ]
+}
