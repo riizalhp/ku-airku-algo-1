@@ -181,6 +181,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRole?: Role }
 const App: React.FC = () => {
     const { currentUser } = useAppContext();
     const location = useLocation();
+    const navigate = useNavigate();
 
     // Log app version to verify correct build is deployed
     useEffect(() => {
