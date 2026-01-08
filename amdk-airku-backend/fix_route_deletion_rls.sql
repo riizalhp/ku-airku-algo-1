@@ -7,47 +7,46 @@
 -- =====================================================
 
 -- Step 1: Check current RLS policies on route_plans
-SELECT 
-    schemaname, 
-    tablename, 
-    policyname, 
-    permissive, 
-    roles, 
-    cmd, 
-    qual, 
+SELECT
+    schemaname,
+    tablename,
+    policyname,
+    permissive,
+    roles,
+    cmd,
+    qual,
     with_check
-FROM pg_policies 
-WHERE tablename IN ('route_plans', 'route_stops')
+FROM pg_policies
+WHERE
+    tablename IN ('route_plans', 'route_stops')
 ORDER BY tablename, policyname;
 
 -- Step 2: Drop existing restrictive delete policies if they exist
 DROP POLICY IF EXISTS "Users can only delete their own routes" ON route_plans;
+
 DROP POLICY IF EXISTS "Only assigned driver can delete" ON route_plans;
+
 DROP POLICY IF EXISTS "route_stops_delete_policy" ON route_stops;
 
 -- Step 3: Create permissive delete policy for admins
-CREATE POLICY "Admins can delete any route"
-ON route_plans
-FOR DELETE
-TO authenticated
-USING (
+CREATE POLICY "Admins can delete any route" ON route_plans FOR DELETE TO authenticated USING (
     EXISTS (
-        SELECT 1 FROM users
-        WHERE users.id = auth.uid()
-        AND users.role = 'Admin'
+        SELECT 1
+        FROM users
+        WHERE
+            users.id = auth.uid ()
+            AND users.role = 'Admin'
     )
 );
 
 -- Step 4: Create permissive delete policy for route_stops
-CREATE POLICY "Admins can delete any route stop"
-ON route_stops
-FOR DELETE
-TO authenticated
-USING (
+CREATE POLICY "Admins can delete any route stop" ON route_stops FOR DELETE TO authenticated USING (
     EXISTS (
-        SELECT 1 FROM users
-        WHERE users.id = auth.uid()
-        AND users.role = 'Admin'
+        SELECT 1
+        FROM users
+        WHERE
+            users.id = auth.uid ()
+            AND users.role = 'Admin'
     )
 );
 
@@ -69,50 +68,57 @@ AND confrelid::regclass::text = 'route_plans';
 
 -- Step 6: Drop and recreate FK with CASCADE if needed
 -- (Only run if the above query shows on_delete_action is not 'c' for CASCADE)
-ALTER TABLE route_stops 
+ALTER TABLE route_stops
 DROP CONSTRAINT IF EXISTS route_stops_route_plan_id_fkey;
 
 ALTER TABLE route_stops
-ADD CONSTRAINT route_stops_route_plan_id_fkey 
-FOREIGN KEY (route_plan_id) 
-REFERENCES route_plans(id) 
-ON DELETE CASCADE;
+ADD CONSTRAINT route_stops_route_plan_id_fkey FOREIGN KEY (route_plan_id) REFERENCES route_plans (id) ON DELETE CASCADE;
 
 -- Step 7: Create permissive update policy for orders (to set back to Pending)
 DROP POLICY IF EXISTS "Admins can update any order" ON orders;
 
-CREATE POLICY "Admins can update any order"
-ON orders
-FOR UPDATE
-TO authenticated
-USING (
+CREATE POLICY "Admins can update any order" ON orders FOR
+UPDATE TO authenticated USING (
     EXISTS (
-        SELECT 1 FROM users
-        WHERE users.id = auth.uid()
-        AND users.role = 'Admin'
+        SELECT 1
+        FROM users
+        WHERE
+            users.id = auth.uid ()
+            AND users.role = 'Admin'
     )
 )
-WITH CHECK (
-    EXISTS (
-        SELECT 1 FROM users
-        WHERE users.id = auth.uid()
-        AND users.role = 'Admin'
-    )
-);
+WITH
+    CHECK (
+        EXISTS (
+            SELECT 1
+            FROM users
+            WHERE
+                users.id = auth.uid ()
+                AND users.role = 'Admin'
+        )
+    );
 
 -- Step 8: Grant necessary permissions to authenticated users
 GRANT DELETE ON route_plans TO authenticated;
+
 GRANT DELETE ON route_stops TO authenticated;
+
 GRANT UPDATE ON orders TO authenticated;
 
 -- Step 9: Verify policies are active
-SELECT 
+SELECT
     tablename,
     COUNT(*) as policy_count,
-    STRING_AGG(policyname, ', ') as policies
-FROM pg_policies 
-WHERE tablename IN ('route_plans', 'route_stops', 'orders')
-GROUP BY tablename;
+    STRING_AGG (policyname, ', ') as policies
+FROM pg_policies
+WHERE
+    tablename IN (
+        'route_plans',
+        'route_stops',
+        'orders'
+    )
+GROUP BY
+    tablename;
 
 -- =====================================================
 -- TESTING QUERIES (Run these to verify fixes work)

@@ -26,7 +26,8 @@ const createSalesVisitPlan = async (req, res) => {
         }));
 
         const depotLocation = { lat: -7.8664161, lng: 110.1486773 }; // PDAM
-        const calculatedTrips = calculateSavingsMatrixRoutes(nodes, depotLocation, Infinity); // Infinity capacity
+        const MAX_STOPS_PER_ROUTE = 8; // Sales visit bisa lebih banyak stops
+        const calculatedTrips = calculateSavingsMatrixRoutes(nodes, depotLocation, Infinity, MAX_STOPS_PER_ROUTE); // Infinity capacity
 
         if (calculatedTrips.length === 0 || calculatedTrips[0].length === 0) {
             return res.status(500).json({ message: "Gagal membuat rencana rute kunjungan." });

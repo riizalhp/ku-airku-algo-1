@@ -236,7 +236,8 @@ const assignShipment = async (req, res) => {
         console.log(`[Shipment Assignment] Creating route with ${nodes.length} nodes`);
 
         // Generate optimized route using Clarke-Wright
-        const calculatedTrips = calculateSavingsMatrixRoutes(nodes, depotLocation, vehicle.capacity);
+        const MAX_STOPS_PER_ROUTE = 4; // Maksimal 4 stops per rute
+        const calculatedTrips = calculateSavingsMatrixRoutes(nodes, depotLocation, vehicle.capacity, MAX_STOPS_PER_ROUTE);
         
         console.log(`[Shipment Assignment] Generated ${calculatedTrips.length} trips`);
 

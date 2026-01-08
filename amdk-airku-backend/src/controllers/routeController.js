@@ -121,7 +121,8 @@ async function createUnassignedRoutes(orders, deliveryDate, res) {
 
     // ===== STEP 2: RUN CLARKE-WRIGHT FOR ALL ORDERS AT ONCE =====
     console.log('[Route Planning] Running Clarke-Wright Savings Matrix algorithm...');
-    const calculatedTrips = calculateSavingsMatrixRoutes(nodes, depotLocation, DEFAULT_CAPACITY);
+    const MAX_STOPS_PER_ROUTE = 4; // Maksimal 4 stops per rute untuk pembagian optimal
+    const calculatedTrips = calculateSavingsMatrixRoutes(nodes, depotLocation, DEFAULT_CAPACITY, MAX_STOPS_PER_ROUTE);
     
     console.log(`[Route Planning] Clarke-Wright generated ${calculatedTrips.length} optimal routes`);
 
@@ -274,7 +275,8 @@ async function createAssignedRoutes(remainingOrders, deliveryDate, assignments, 
             
             // ===== RUN CLARKE-WRIGHT FOR ALL REMAINING ORDERS =====
             console.log(`[Route Planning] Running Clarke-Wright for vehicle ${vehicle.plateNumber}...`);
-            const calculatedTrips = calculateSavingsMatrixRoutes(nodes, depotLocation, vehicle.capacity);
+            const MAX_STOPS_PER_ROUTE = 4; // Maksimal 4 stops per rute untuk pembagian optimal
+            const calculatedTrips = calculateSavingsMatrixRoutes(nodes, depotLocation, vehicle.capacity, MAX_STOPS_PER_ROUTE);
             
             console.log(`[Route Planning] Vehicle ${vehicle.plateNumber} - Clarke-Wright generated ${calculatedTrips.length} trips`);
             

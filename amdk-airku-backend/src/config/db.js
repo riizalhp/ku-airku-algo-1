@@ -1,21 +1,22 @@
-const mysql = require('mysql2');
+const { Pool } = require('pg');
 require('dotenv').config();
 
-const dbConfig = {
-  host: process.env.MYSQLHOST,
-  port: process.env.MYSQLPORT,
-  user: process.env.MYSQLUSER,
-  password: process.env.MYSQLPASSWORD,
-  database: process.env.MYSQLDATABASE,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  // Return date/datetime columns as strings, not Date objects.
-  // This prevents timezone conversions by the driver.
-  dateStrings: true
-};
+// Supabase PostgreSQL configuration
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
 
-const pool = mysql.createPool(dbConfig);
+// Test connection
+pool.on('connect', () => {
+  console.log('✅ Connected to Supabase PostgreSQL');
+});
 
-// Export the promise-based pool for async/await
-module.exports = pool.promise();
+pool.on('error', (err) => {
+  console.error('❌ Unexpected error on idle client', err);
+  process.exit(-1);
+});
+
+module.exports = pool;

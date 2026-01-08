@@ -57,12 +57,15 @@ const getDistance = (coord1, coord2) => {
  * @param {Array<object>} nodes - Array of delivery nodes, e.g., { id, location, demand }.
  * @param {object} depotLocation - The starting and ending point for all routes.
  * @param {number} vehicleCapacity - The maximum capacity of the vehicle.
+ * @param {number} maxStopsPerRoute - Maximum number of stops allowed per route (default: unlimited).
  * @returns {Array<Array<string>>} An array of trips, where each trip is an array of node IDs in sequence.
  */
-const calculateSavingsMatrixRoutes = (nodes, depotLocation, vehicleCapacity) => {
+const calculateSavingsMatrixRoutes = (nodes, depotLocation, vehicleCapacity, maxStopsPerRoute = Infinity) => {
     if (!nodes || nodes.length === 0) {
         return [];
     }
+
+    console.log(`[Clarke-Wright] Starting with ${nodes.length} nodes, capacity=${vehicleCapacity}, maxStops=${maxStopsPerRoute}`);
 
     // 1. Calculate savings for all pairs of nodes
     const savings = [];
@@ -84,6 +87,7 @@ const calculateSavingsMatrixRoutes = (nodes, depotLocation, vehicleCapacity) => 
 
     // 2. Sort savings in descending order
     savings.sort((a, b) => b.saving - a.saving);
+    console.log(`[Clarke-Wright] Calculated ${savings.length} savings, top saving: ${savings[0]?.saving?.toFixed(2)} km`);
 
     // 3. Initialize routes, one for each node initially
     const routes = nodes.map(node => ({
@@ -92,6 +96,10 @@ const calculateSavingsMatrixRoutes = (nodes, depotLocation, vehicleCapacity) => 
     }));
 
     // 4. Merge routes based on savings
+    let mergeCount = 0;
+    let skippedCapacity = 0;
+    let skippedStops = 0;
+    
     for (const { from, to, saving } of savings) {
         if (saving <= 0) break; // No more savings to be had
 
@@ -105,34 +113,55 @@ const calculateSavingsMatrixRoutes = (nodes, depotLocation, vehicleCapacity) => 
 
             // And if the connection point is an endpoint of its route
             if (isFromEndpoint && isToEndpoint) {
-                // And if the merged load does not exceed capacity
-                if (routeFrom.load + routeTo.load <= vehicleCapacity) {
-                    // Perform the merge
-                    if (routeFrom.path[routeFrom.path.length - 1] === from) {
-                        routeFrom.path.reverse();
-                    }
-                    if (routeTo.path[0] === to) {
-                        routeTo.path.reverse();
-                    }
-
-                    // New merged path and load
-                    const newPath = [...routeTo.path, ...routeFrom.path];
-                    const newLoad = routeFrom.load + routeTo.load;
-
-                    // Update the 'from' route with the new merged data
-                    routeFrom.path = newPath;
-                    routeFrom.load = newLoad;
-                    
-                    // Mark the 'to' route as merged by emptying its path
-                    routeTo.path = [];
-                    routeTo.load = 0;
+                const newLoad = routeFrom.load + routeTo.load;
+                const newStopsCount = routeFrom.path.length + routeTo.path.length;
+                
+                // Check capacity constraint
+                if (newLoad > vehicleCapacity) {
+                    skippedCapacity++;
+                    continue; // Skip this merge due to capacity
                 }
+                
+                // Check max stops constraint
+                if (newStopsCount > maxStopsPerRoute) {
+                    skippedStops++;
+                    continue; // Skip this merge due to max stops limit
+                }
+                
+                // Perform the merge
+                if (routeFrom.path[routeFrom.path.length - 1] === from) {
+                    routeFrom.path.reverse();
+                }
+                if (routeTo.path[0] === to) {
+                    routeTo.path.reverse();
+                }
+
+                // New merged path and load
+                const newPath = [...routeTo.path, ...routeFrom.path];
+
+                // Update the 'from' route with the new merged data
+                routeFrom.path = newPath;
+                routeFrom.load = newLoad;
+                
+                // Mark the 'to' route as merged by emptying its path
+                routeTo.path = [];
+                routeTo.load = 0;
+                
+                mergeCount++;
             }
         }
     }
 
+    const finalRoutes = routes.filter(r => r.path.length > 0);
+    console.log(`[Clarke-Wright] Completed: ${finalRoutes.length} routes created`);
+    console.log(`[Clarke-Wright] Merges performed: ${mergeCount}, skipped (capacity): ${skippedCapacity}, skipped (max stops): ${skippedStops}`);
+    
+    finalRoutes.forEach((route, idx) => {
+        console.log(`[Clarke-Wright] Route ${idx + 1}: ${route.path.length} stops, ${route.load.toFixed(1)} units`);
+    });
+
     // 5. Filter out the empty (merged) routes and return just the paths
-    return routes.filter(r => r.path.length > 0).map(r => r.path);
+    return finalRoutes.map(r => r.path);
 };
 
 module.exports = {
